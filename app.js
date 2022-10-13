@@ -1,41 +1,41 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const databaseInit = require('./src/utils/database/databaseInit');
+const autoImportEnvVariables = require('./src/utils/utils');
+const dotenv = require('dotenv');
+const express = require('express');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+dotenv.config();
+autoImportEnvVariables();
 
-var app = express();
+const app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+databaseInit();
 
-app.use(logger('dev'));
+const cors = require('cors');
+app.use(cors());
+
+//parse body to json
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+const contactRoutes = require('./src/api/routes/contact-routes.js');
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+app.use('/api/contacts', contactRoutes);
+
+//handle unsupported routes
+app.use(() => {
+	const error = new Error('Could not find this route');
+	error.code = 404;
+	throw error;
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+// error handling middleware
+app.use((error, req, res, next) => {
+	if (res.headersSent) {
+		return next(error);
+	}
+	res.status(error.code || 500);
+	res.json({
+		message: error.message || 'An unknown error occured!'
+	});
 });
 
 module.exports = app;
