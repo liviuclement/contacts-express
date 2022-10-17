@@ -6,8 +6,15 @@ const getContacts = async(req, res) => {
 	const parsedPage = parseInt(page);
 	const parsedIsEven = !!parseInt(onlyEven);
 
-	let countSqlQuery = `SELECT COUNT(*) AS count FROM contacts WHERE (first_name LIKE '%${query}%' OR last_name LIKE '%${query}%' OR phone LIKE '%${query}%')`;
-	let contactsSqlQuery = `SELECT * FROM contacts WHERE (first_name LIKE '%${query}%' OR last_name LIKE '%${query}%' OR phone LIKE '%${query}%') `;
+	let countSqlQuery = `SELECT COUNT(*) AS count
+                         FROM contacts
+                         WHERE (first_name LIKE '%${ query }%'
+                            OR last_name LIKE '%${ query }%'
+                            OR phone LIKE '%${ query }%')`;
+	let contactsSqlQuery = `SELECT *
+                            FROM contacts
+                            WHERE (first_name LIKE '%${ query }%' OR last_name LIKE '%${ query }%' OR
+                                   phone LIKE '%${ query }%') `;
 
 	if (!!country) {
 		contactsSqlQuery += `AND country = "US" `;
@@ -19,7 +26,7 @@ const getContacts = async(req, res) => {
 		countSqlQuery += `AND mod(id, 2) = 0 `;
 	}
 
-	contactsSqlQuery += `LIMIT ${ 10 * ( parsedPage - 1 ) + 1 }, ${ parsedPage * 10 }`;
+	contactsSqlQuery += `LIMIT ${ 10 * ( parsedPage - 1 ) }, 10`;
 
 	try {
 		const contacts = await sequelize.query(contactsSqlQuery, { type: QueryTypes.SELECT });
@@ -29,12 +36,13 @@ const getContacts = async(req, res) => {
 			contacts,
 			count: count[0]?.count,
 			page: parsedPage,
+			next: page * 10 < count[0]?.count,
 		});
 	} catch(err) {
 		res.status(500).json({
 			message: err.message,
 			err,
-		})
+		});
 	}
 
 	// Contact.findAndCountAll({
